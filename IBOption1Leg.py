@@ -1,58 +1,137 @@
-from ib_insync import IB, Option
-import pyttsx3
+import time
+import sys
+import threading
+from ibapi.contract import Contract
+from IBOptionToolOffical import IBApp, OrderManager
 
-from IBOptionTool import OrderManager
+########################################################
+# 单腿下单
+spread_symbol = "UVXY"
+
+leg1_expiry  = "20250321"
+leg1_strike  = 17.5
+leg1_right   = "P"
+leg1_action  = "SELL"
+leg1_ratio   = 1
+
+# 起始与目标价格(组合净价)
+combo_init_price  = 0.50
+combo_price_final = 0.40
+combo_price_step  = 0.01
+########################################################
 
 
 def main():
     # 连接到 IB TWS 或 IB Gateway（请确保 TWS/网关已运行）
-    ib = IB()
-    ib.connect('127.0.0.1', 7496, clientId=1)
+    # 1) 连接 IB TWS/IB Gateway
+    app = IBApp()
+    print("Connecting to IB API...")
+    try:
+        # 真实账户常用7496，纸交易常用7497
+        app.connect("127.0.0.1", 7496, clientId=1)
+    except Exception as e:
+        print("Could not connect to IB API:", e)
+        sys.exit(1)
 
-    # 创建订单管理器实例，传入检查周期
-    manager = OrderManager(ib, checkInterval=8)  # 8秒换一个价格
+    api_thread = threading.Thread(target=app.run, daemon=True)
+    api_thread.start()
 
-    # === 订单类型选择 ===
-    engine = pyttsx3.init()
+    # 等待连接成功
+    for _ in range(30):
+        if app.next_order_id is not None:
+            break
+        time.sleep(0.1)
+    if app.next_order_id is None:
+        print("Warning: next valid order ID not received. Proceeding anyway.")
 
+    # 2) 创建订单管理器
+    manager = OrderManager(app)
 
+    # 构造legs列表
+    legs = [
+        {
+            "underlying": spread_symbol,
+            "lastTradeDate": leg1_expiry,
+            "strike": leg1_strike,
+            "right": leg1_right,
+            "action": leg1_action,
+            "quantity": leg1_ratio
+        }
+    ]
 
-    # === 单腿订单参数 ===
-    # (用星号注释块，将来你或你的伙伴可在此修改参数)
-    # ***********************************1
-    single_symbol   = "UVXY"
-    single_expiry   = "20250307"  # 格式可按 "YYYYMMDD"
-    single_strike   = 17.5        # 行权价
-    single_right    = "P"         # "C" or "P"
-    single_action   = "SELL"      # "BUY" or "SELL"
-    single_quantity = 1           # 下单数量
-    single_init_price = 0.40      # 初始限价
-    single_price_step = 0.01      # 每次调价步长
-    single_price_final = 0.33     # 最终限价
-    # ***********************************
+    # ========== 新增功能：在下单前打印每条腿信息、当前市场价格、组合价格，并询问确认 ==========
 
-    # 构造单腿合约
-    contract_single = Option(
-        symbol=single_symbol,
-        lastTradeDateOrContractMonth=single_expiry,
-        strike=single_strike,
-        right=single_right,
-        multiplier="100",   # 如果是美股期权，通常是100
-        exchange="SMART",
-        currency="USD"
-    )
-    # 执行单腿下单
-    manager.place_single_option_order_incremental(
-        contract_single,
-        action=single_action,
-        quantity=single_quantity,
-        initial_price=single_init_price,
-        price_step=single_price_step,  
-        price_final=single_price_final
-    )
+    # 4) 打印每条腿的市场行情 + 计算组合预估净价
+    net_estimated_cost = 0.0  # 组合的预估净成本(正=花费，负=收到)
+    print("\n======== Legs Market Data Preview ========")
+    for idx, leg in enumerate(legs, start=1):
+        # 为了获取准确行情，需要先构建并resolve_contract
+        tmp_contract = Contract()
+        tmp_contract.symbol = leg['underlying']
+        tmp_contract.secType = leg.get('secType', "OPT")
+        tmp_contract.exchange = leg.get('exchange', "SMART")
+        tmp_contract.currency = leg.get('currency', "USD")
+        tmp_contract.lastTradeDateOrContractMonth = leg['lastTradeDate']
+        tmp_contract.strike = float(leg['strike'])
+        tmp_contract.right = leg['right']
+        tmp_contract.multiplier = leg.get('multiplier', "100")
 
+        resolved_c = app.resolve_contract(tmp_contract)
+        if resolved_c is None:
+            print(f"Leg {idx} ({leg['action']} {leg['quantity']}): Resolve contract failed.")
+            continue
 
-    ib.disconnect()
+        snapshot = app.get_market_snapshot(resolved_c)
+        bid  = snapshot.get("bid", 0.0)
+        ask  = snapshot.get("ask", 0.0)
+        last = snapshot.get("last", 0.0)
+
+        # 这里示例用简单的 mid = (bid+ask)/2 若都>0，否则用 last
+        if (bid > 0.0) and (ask > 0.0):
+            mid = (bid + ask) / 2.0
+        else:
+            mid = last
+
+        # 1张合约 = 100股; 下单数量leg['quantity']是几张(手)
+        # 若是 BUY, 则净成本为 +mid；若是 SELL, 则为 -mid
+        sign = 1 if leg['action'].upper() == "BUY" else -1
+        # leg['quantity']张合约, 每张 * 100 股
+        leg_cost = mid * 100 * leg['quantity'] * sign
+        net_estimated_cost += leg_cost
+
+        print(f"Leg {idx}: Action={leg['action']} Qty={leg['quantity']}  "
+              f"Exp={leg['lastTradeDate']} Strike={leg['strike']} {leg['right']}, "
+              f"bid={bid:.2f}, ask={ask:.2f}, last={last:.2f}, mid~={mid:.2f}, "
+              f"Leg est. cost={leg_cost:.2f}")
+
+    print(f"--> Estimated combo total cost (for {leg['quantity']} leg) = {net_estimated_cost:.2f}")
+    print("----------------------------------------------")
+    print(f"下单金额参数: 起始={combo_init_price:.2f}, 步长={combo_price_step:.2f}, 终止={combo_price_final:.2f}")
+    print("==============================================")
+
+    # 5) 增加一个交互：是否确认下单
+    user_input = input("是否确认下单？输入 Y 或 y 确认下单，其余任意键取消并退出: ")
+    if user_input.lower() != 'y':
+        print("用户取消下单，程序结束。")
+        sys.exit(0)
+
+    # ========= 如果用户确认，才进行下单 =========
+    order_id = manager.place_option_order(legs, order_type="LMT", limit_price=combo_init_price)
+    if order_id:
+        print(f"单腿下单完成, 订单ID={order_id}, 初始限价={combo_init_price:.2f}")
+        # 继续自动追价到目标 combo_price_final
+        manager.chase_order_to_final(
+            order_id    = order_id,
+            step        = combo_price_step,
+            final_price = combo_price_final,
+            interval    = 5.0   # 每5秒递价一次(可自行调整)
+        )
+
+    # 等待一段时间以观察订单状态 (此处示例先等待 30 秒)
+    time.sleep(30)
+
+    print("Disconnecting from IB...")
+    app.disconnect()
 
 if __name__ == "__main__":
     main()
