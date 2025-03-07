@@ -423,10 +423,13 @@ class OrderManager:
 
         chase_thread = threading.Thread(
             target=_chase_logic,
-            args=(order_id, step, final_price, interval),
-            daemon=True
+            args=(order_id, step, final_price, interval)
+            # daemon=True 删掉，不要加！
         )
         chase_thread.start()
+
+        # **这里新增：返回这个线程对象**
+        return chase_thread
 
 
 # ================ 主程序入口示例(无需交互) ================
@@ -587,15 +590,16 @@ if __name__ == "__main__":
     if order_id:
         print(f"四腿组合下单完成, 订单ID={order_id}, 初始限价={combo_init_price:.2f}")
         # 继续自动追价到目标 combo_price_final
-        manager.chase_order_to_final(
+        # 注意这里：把返回的 chase_thread 存起来
+        chase_thread = manager.chase_order_to_final(
             order_id    = order_id,
             step        = combo_price_step,
             final_price = combo_price_final,
             interval    = 5.0   # 每5秒递价一次(可自行调整)
         )
 
-    # 等待一段时间以观察订单状态 (此处示例先等待 30 秒)
-    time.sleep(30)
+    # 等待追价线程执行完毕（即订单被填满/取消或到达final价）
+    chase_thread.join()
 
     print("Disconnecting from IB...")
     app.disconnect()

@@ -136,15 +136,16 @@ def main():
     if order_id:
         print(f"两腿组合下单完成, 订单ID={order_id}, 初始限价={combo_init_price:.2f}")
         # 继续自动追价到目标 combo_price_final
-        manager.chase_order_to_final(
+        # 注意这里：把返回的 chase_thread 存起来
+        chase_thread = manager.chase_order_to_final(
             order_id    = order_id,
             step        = combo_price_step,
             final_price = combo_price_final,
-            interval    = 5.0   # 每5秒递价一次(可自行调整)
+            interval    = interval
         )
 
-    # 等待一段时间以观察订单状态 (此处示例先等待 30 秒)
-    time.sleep(30)
+    # 等待追价线程执行完毕（即订单被填满/取消或到达final价）
+    chase_thread.join()
 
     print("Disconnecting from IB...")
     app.disconnect()

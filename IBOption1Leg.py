@@ -6,17 +6,18 @@ from IBOptionToolOffical import IBApp, OrderManager
 
 ########################################################
 # 单腿下单
+interval = 10.0   # 每n秒递价一次(可自行调整)
 spread_symbol = "UVXY"
 
-leg1_expiry  = "20250321"
-leg1_strike  = 17.5
+leg1_expiry  = "20250328"
+leg1_strike  = 18.5
 leg1_right   = "P"
 leg1_action  = "SELL"
-leg1_ratio   = 1
+leg1_ratio   = 30
 
 # 起始与目标价格(组合净价)
-combo_init_price  = 0.50
-combo_price_final = 0.40
+combo_init_price  = 0.80
+combo_price_final = 0.70
 combo_price_step  = 0.01
 ########################################################
 
@@ -120,15 +121,16 @@ def main():
     if order_id:
         print(f"单腿下单完成, 订单ID={order_id}, 初始限价={combo_init_price:.2f}")
         # 继续自动追价到目标 combo_price_final
-        manager.chase_order_to_final(
+        # 注意这里：把返回的 chase_thread 存起来
+        chase_thread = manager.chase_order_to_final(
             order_id    = order_id,
             step        = combo_price_step,
             final_price = combo_price_final,
-            interval    = 5.0   # 每5秒递价一次(可自行调整)
+            interval    = interval
         )
 
-    # 等待一段时间以观察订单状态 (此处示例先等待 30 秒)
-    time.sleep(30)
+    # 等待追价线程执行完毕（即订单被填满/取消或到达final价）
+    chase_thread.join()
 
     print("Disconnecting from IB...")
     app.disconnect()
