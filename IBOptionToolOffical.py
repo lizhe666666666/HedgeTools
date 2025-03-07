@@ -172,23 +172,22 @@ class IBApp(EWrapper, EClient):
         return details_list[0]
 
     def get_market_snapshot(self, contract: Contract, req_id: int = None, timeout: float = 5.0):
-        """
-        请求市场数据快照, 返回行情数据字典, 
-        可能含有: {'bid':..., 'ask':..., 'last':..., 'volume':...}等
-        """
         if req_id is None:
             req_id = 5000000 + (0 if self.next_order_id is None else self.next_order_id)
+
         self.market_data[req_id] = {}
         ev = threading.Event()
         self._req_events[req_id] = ev
-        # snapshot=True 时，请求快照行情
+
+        # snapshot=True，向IB请求一次性快照
         self.reqMktData(req_id, contract, "", True, False, [])
+
+        # 等待tickSnapshotEnd 或超时
         ev.wait(timeout)
-        try:
-            self.cancelMktData(req_id)
-        except Exception:
-            pass
+
         data = self.market_data.get(req_id, {})
+        
+        # 对于快照，这里就不cancelMktData了
         return data
 
 

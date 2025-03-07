@@ -143,6 +143,8 @@ def main():
     user_input = input("是否确认下单？输入 Y 或 y 确认下单，其余任意键取消并退出: ")
     if user_input.lower() != 'y':
         print("用户取消下单，程序结束。")
+        # 先主动断开，以防与TWS还连接着
+        app.disconnect()
         sys.exit(0)
 
     # ========= 如果用户确认，才进行下单 =========
