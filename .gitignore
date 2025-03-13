@@ -1,2 +1,5 @@
 /__pycache__
 /.venv
+/site-packages
+Filtered_Results.csv
+*.csv

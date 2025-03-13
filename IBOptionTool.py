@@ -299,7 +299,7 @@ class OrderManager:
         print(f"组合下单方向: {combo_action}, 数量: {quantity}, 初始净价: {initial_price:.2f}")
 
         # ============ 在此处查询该 BAG 合约的市场行情 =============
-        ticker = self.ib.reqMktData(combo_contract, "", snapshot=False)
+        ticker = self.ib.reqMktData(combo_contract, "", snapshot=True)
         self.ib.sleep(2)
         print(">>> 当前多腿组合市场报价：Bid:", ticker.bid, "Ask:", ticker.ask, "Last:", ticker.last)
 

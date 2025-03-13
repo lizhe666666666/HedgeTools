@@ -4,40 +4,39 @@ import threading
 from ibapi.contract import Contract
 from IBOptionToolOffical import IBApp, OrderManager
 
+interval = 10
 ########################################################
 # 四腿下单
-spread_symbol = "PDD"
+spread_symbol = "NKE" 
+leg1_expiry = "20250328" 
+leg1_strike = 84.0 
+leg1_right = "C" 
+leg1_action = "BUY" 
+leg1_ratio = 1
 
-leg1_expiry  = "20250328"
-leg1_strike  = 122.0
-leg1_right   = "C"
-leg1_action  = "BUY"
-leg1_ratio   = 1
+leg2_expiry = "20250328" 
+leg2_strike = 80.0 
+leg2_right = "P" 
+leg2_action = "BUY" 
+leg2_ratio = 1
 
-leg2_expiry  = "20250328"
-leg2_strike  = 118.0
-leg2_right   = "P"
-leg2_action  = "BUY"
-leg2_ratio   = 1
+leg3_expiry = "20250321" 
+leg3_strike = 90.0 
+leg3_right = "C" 
+leg3_action = "SELL" 
+leg3_ratio = 1
 
-leg3_expiry  = "20250321"
-leg3_strike  = 140.0
-leg3_right   = "C"
-leg3_action  = "SELL"
-leg3_ratio   = 1
+leg4_expiry = "20250321" 
+leg4_strike = 74.0 
+leg4_right = "P" 
+leg4_action = "SELL" 
+leg4_ratio = 1
 
-leg4_expiry  = "20250321"
-leg4_strike  = 100.0
-leg4_right   = "P"
-leg4_action  = "SELL"
-leg4_ratio   = 1
+combo_action = "BUY" 
+combo_quantity = 3 
+combo_init_price = 3.00
 
-# 组合单总数量(即多少手)
-combo_quantity = 1
-
-# 起始与目标价格(组合净价)
-combo_init_price  = 10.00
-combo_price_final = 11.66
+combo_price_final = 4.13
 combo_price_step  = 0.01
 ########################################################
 

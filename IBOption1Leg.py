@@ -7,17 +7,19 @@ from IBOptionToolOffical import IBApp, OrderManager
 ########################################################
 # 单腿下单
 interval = 10.0   # 每n秒递价一次(可自行调整)
+
+
 spread_symbol = "UVXY"
 
-leg1_expiry  = "20250328"
-leg1_strike  = 18.5
+leg1_expiry  = "20250516"
+leg1_strike  = 17.0
 leg1_right   = "P"
 leg1_action  = "SELL"
-leg1_ratio   = 30
+leg1_ratio   = 90
 
 # 起始与目标价格(组合净价)
-combo_init_price  = 0.80
-combo_price_final = 0.70
+combo_init_price  = 1.19
+combo_price_final = 1.08
 combo_price_step  = 0.01
 ########################################################
 

@@ -6,7 +6,7 @@
 2. 如果文本中提到「Buy to open N ... put」和「Buy to open N ... call」，则说明每条腿都是 1 份合约；而 combo_quantity 则为 N。  
 3. 请将所有与下单相关的信息（包括执行价、到期日、执行类型等）完整写入模版；在没有明确数量或信息时，按默认示例保持不变或根据上下文合理推断。  
 4. 请不要输出提示词本身，只输出最终的模版。  
-5. 模版给出的事4条腿的demo，实际情况可能是2到n条腿（n>2)
+5. 模版给出的是4条腿的demo，实际情况可能是2到n条腿（n>2)
 6. 如果没有特定的年份信息，则默认为2025年
 7. 返回的模版每一行都需要有换行，方便我直接复制到程序中。
 
@@ -41,17 +41,13 @@ combo_quantity = 3
 combo_init_price = 10.40
 
 **以下为需要提取的文本：**  
-I opened NKE Double Diagonals:
- 
-Buy to open 3  NKE Mar.28  84 call
-Buy to open 3  NKE Mar.28  80 put
-Sell to open 3  NKE Mar.21   90 call 
-Sell to open 3  NKE Mar.21   74 put﻿
-Price:  $4.13 debit per DD (trade consists of 3) 
+I opened DOCU  straddle.
 
-Earnings day:   Thursday, March 20  After Close
+Buy to open 1  DOCU   Mar.14  80  put 
+Buy to open 1  DOCU   Mar.14  80  call
+Price:  $9.29  debit per straddle
 
-Current price:  $81.80
+
 ---
 **最终输出：**
 请只返回合乎以上结构的字符串，不要包含任何多余的说明文字或符号。
